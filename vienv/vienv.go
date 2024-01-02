@@ -87,10 +87,10 @@ func (v *VirtualEnvironment) createConfig() error {
 func (v *VirtualEnvironment) getToolFromRepo(toolName string) (*Tool, error) {
 	fmt.Printf("Installing new bio tool: %s", toolName)
 	repoURL := "https://github.com/propenster/bioenv"
-	toolsDirFromRepo := fmt.Sprintf("tools/%s", toolName) //this is the subdirectory on the remote repo for this particular tool
+	toolsDirFromRepo := fmt.Sprintf("tools/%s/%s", v.config.Os, toolName) //this is the subdirectory on the remote repo for this particular tool
 
 	//this is on our pc where we want the contents of gatk to be dumped
-	toolsLocalTargetDir := fmt.Sprintf("%v\\%v", v.config.WorkingDir, "tools")
+	toolsLocalTargetDir := filepath.Join(v.config.WorkingDir, "tools", v.config.Os)
 
 	cmd := exec.Command("git", "clone", "--filter=blob:none", "--sparse", fmt.Sprintf("%s.git", repoURL))
 	cmd.Dir = toolsLocalTargetDir
@@ -119,7 +119,7 @@ func (v *VirtualEnvironment) getToolFromRepo(toolName string) (*Tool, error) {
 	}
 
 	//create a tool object
-	toolRepoUrl := fmt.Sprintf("%s/%s/%s", repoURL, "tree/master/bioenv/tools", toolName)
+	toolRepoUrl := fmt.Sprintf("%s/%s/%s/%s", repoURL, "tree/master/bioenv/tools", v.config.Os, toolName)
 	tool := &Tool{
 		Name:     toolName,
 		Version:  "0",
@@ -127,6 +127,11 @@ func (v *VirtualEnvironment) getToolFromRepo(toolName string) (*Tool, error) {
 		Path:     toolsLocalTargetDir,
 	}
 	return tool, nil
+}
+
+func (v *VirtualEnvironment) CallTool(toolName string) error {
+
+	return nil
 }
 
 func Init(dir, name string) (*VirtualEnvironment, error) {
@@ -145,11 +150,17 @@ func Init(dir, name string) (*VirtualEnvironment, error) {
 	}
 
 	//create configFile
+	var osString string
+	if runtime.GOOS == "windows" {
+		osString = "windows"
+	} else {
+		osString = "unix"
+	}
 	config := Config{
 		WorkingDir:   workDirAbsolutePath,
 		EnvName:      name,
 		Architecture: runtime.GOARCH,
-		Os:           runtime.GOOS,
+		Os:           osString,
 		Tools:        make([]Tool, 0),
 	}
 	fmt.Printf("Config object generated: %v\n", config)
