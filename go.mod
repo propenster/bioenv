@@ -1,3 +1,3 @@
-module github.com/propenster/bioenv
+module bioenv
 
-go 1.18
+go 1.20

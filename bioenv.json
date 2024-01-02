@@ -1,13 +1,7 @@
 {
-    "envName": "mybioenv",
-    "arch": "",
-    "workingDir": "~/home/propenster/dev",
-    "tools": [
-        {
-            "name": "gatk",
-            "version": "1.131",
-            "repoLink": "https://github.com/propenster/bioenv/tools/gatk",
-            "path": "~/home/propenster/dev/tools/gatk"
-        }
-    ]
+    "envName": "myfirstbioenv",
+    "arch": "amd64",
+    "os": "windows",
+    "workingDirectory": "C:\\Users\\faith.olusegun\\go\\src\\bioenv",
+    "tools": []
 }

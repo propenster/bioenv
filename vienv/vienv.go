@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 )
 
@@ -15,17 +16,16 @@ type Tool struct {
 	Path     string `json:"path"`
 }
 
-//typically our config.json
+// typically our config.json
 type Config struct {
 	EnvName      string `json:"envName"`
 	Architecture string `json:"arch"`
+	Os           string `json:"os"`
 	WorkingDir   string `json:"workingDirectory"`
 	Tools        []Tool `json:"tools"`
 }
 
 type VirtualEnvironment struct {
-	//tempName string
-	//envName    string
 	configPath string
 	config     *Config
 	isActive   bool
@@ -72,8 +72,18 @@ func (v *VirtualEnvironment) updateConfig(newTool Tool) error {
 	}
 	return nil
 }
+func (v *VirtualEnvironment) createConfig() error {
+	updatedContent, err := json.MarshalIndent(&v.config, "", "    ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(v.configPath, updatedContent, os.ModePerm); err != nil {
+		return err
+	}
+	return nil
+}
 
-//this utility fetches tool from a repository...
+// this utility fetches tool from a repository...
 func (v *VirtualEnvironment) getToolFromRepo(toolName string) (*Tool, error) {
 	fmt.Printf("Installing new bio tool: %s", toolName)
 	repoURL := "https://github.com/propenster/bioenv"
@@ -121,21 +131,30 @@ func (v *VirtualEnvironment) getToolFromRepo(toolName string) (*Tool, error) {
 
 func Init(dir, name string) (*VirtualEnvironment, error) {
 	//make sure dir is valid dir...
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		fmt.Printf("Directory %v does not exist", dir)
+	workDirAbsolutePath, err := filepath.Abs(dir)
+	fmt.Printf("Working directory abs path: %v\n", workDirAbsolutePath)
+	if err != nil {
+		fmt.Printf("Error getting work directory %v Error: %v\n", dir, err)
+		return nil, err
+	}
+
+	//this is actually not really necessary I think
+	if _, err := os.Stat(workDirAbsolutePath); os.IsNotExist(err) {
+		fmt.Printf("Directory %v does not exist\n", workDirAbsolutePath)
 		return nil, err
 	}
 
 	//create configFile
-	var config Config
-	config_path := fmt.Sprintf("%s\\%s", dir, "bioenv.json")
-	if err := loadConfig(config_path, config); err != nil {
-		fmt.Printf("Error creating config file %v", config_path)
-		return nil, err
+	config := Config{
+		WorkingDir:   workDirAbsolutePath,
+		EnvName:      name,
+		Architecture: runtime.GOARCH,
+		Os:           runtime.GOOS,
+		Tools:        make([]Tool, 0),
 	}
-
-	//done
-	config.EnvName = name
+	fmt.Printf("Config object generated: %v\n", config)
+	config_path := filepath.Join(workDirAbsolutePath, "bioenv.json")
+	fmt.Printf("Config file path: %v\n", config_path)
 
 	venv = VirtualEnvironment{
 
@@ -145,7 +164,13 @@ func Init(dir, name string) (*VirtualEnvironment, error) {
 		stopped:    false,
 	}
 
-	fmt.Printf("Bioenv virtual env: %v", venv)
+	fmt.Printf("Bioenv virtual env: %v\n", venv)
+
+	fmt.Println("Creating virtual environment config...")
+	if err = venv.createConfig(); err != nil {
+		fmt.Println("Error could not create config file")
+		return nil, err
+	}
 
 	//addendum - setPrompt
 	if runtime.GOOS == "windows" {
@@ -161,18 +186,18 @@ func loadConfig(config_path string, config Config) error {
 	if _, err := os.Stat(config_path); os.IsExist(err) {
 		//config file already exists.
 		if _, err := loadConfigFromPath(config_path, &config); err != nil {
-			fmt.Printf("Could not create config file %v", config_path)
+			fmt.Printf("Could not create config file %v\n", config_path)
 			return err
 		}
 	} else {
 		file, err := os.Create(config_path)
 		if err != nil {
-			fmt.Printf("Could not create config file %v", config_path)
+			fmt.Printf("Could not create config file %v\n", config_path)
 			return err
 		}
 		defer file.Close()
 		if _, err := loadConfigFromPath(config_path, &config); err != nil {
-			fmt.Printf("Could not create config file %v", config_path)
+			fmt.Printf("Could not create config file %v\n", config_path)
 			return err
 		}
 	}
@@ -184,11 +209,11 @@ func loadConfig(config_path string, config Config) error {
 func loadConfigFromPath(path string, config *Config) (*Config, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Printf("Could not read config file %v", path)
+		fmt.Printf("Could not read config file %v\n", path)
 		return nil, err
 	}
 	if err := json.Unmarshal([]byte(string(fileContent)), &config); err != nil {
-		fmt.Printf("Error deserializing config file")
+		fmt.Printf("Error deserializing config file\n")
 		return nil, err
 	}
 
