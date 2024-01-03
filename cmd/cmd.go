@@ -24,7 +24,7 @@ func ValidateCommand(command string) error {
 	switch command {
 	case "init":
 		if flag.NArg() != 3 { //this takes only dir to init env and nameOfEnv init . myfirstEnv
-			fmt.Printf("Command: %v takes %v arguments, received %v\n", command, 2, numArgsRecv)
+			fmt.Printf("Command: %v takes %v arguments, received %v\n", command, 3, numArgsRecv)
 			return fmt.Errorf("wrong number of arguments")
 		}
 	case "install":
